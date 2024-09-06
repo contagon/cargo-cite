@@ -1,4 +1,6 @@
 mod block;
+use std::{error::Error, path::PathBuf};
+
 pub use block::Block;
 
 mod file;
@@ -8,55 +10,72 @@ mod bib;
 pub use bib::{keys_to_citations, load_bib, load_style};
 use hayagriva::{citationberg::IndependentStyle, Library};
 
-use std::{env, ffi::OsStr, iter};
-
 use cargo_files_core::{get_target_files, get_targets};
 use clap::Parser;
 
 #[derive(Debug, Parser)]
-struct Cli {
+// Cargo passes "cite" to cargo-cite, so add a hidden argument to capture that.
+#[command(
+    arg(clap::Arg::new("dummy")
+    .value_parser(["cite"])
+    .required(false)
+    .hide(true))
+)]
+struct Args {
+    // Bibliography file
     #[clap(required = true, long = "bib", value_parser = load_bib)]
     bib: Library,
-    #[command(flatten)]
-    manifest: clap_cargo::Manifest,
+    // Citation style
     #[clap(long = "style", default_value = "ieee", value_parser = load_style)]
     style: IndependentStyle,
+    // Cargo manifest location for other crates
+    #[clap(long, conflicts_with = "files")]
+    manifest_path: Option<PathBuf>,
+    /// Path to file or folder to format.  Can be specified multiple times.
+    #[clap(short, long = "file", conflicts_with = "manifest_path")]
+    files: Vec<PathBuf>,
 }
 
 /// A file with comments
-///
-/// This struct is used to parse a file and extract comments [^@simple] [^@test].
-///
-/// [^@simple]: S. Bai, J. Lai, P. Lyu, Y. Cen, B. Wang, and X. Sun, “Graph-Optimisation-Based Self-Calibration Method for IMU/Odometer Using Preintegration Theory,” The Journal of Navigation, vol. 75, no. 3, pp. 594–613, May 2022, doi: 10.1017/S0373463321000722.
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     // Initialize logger
     stderrlog::new().verbosity(3).init().unwrap();
 
-    // Skip cargo & binary name
-    let mut args = env::args_os().peekable();
-    let binary_name = args.next().expect("Should have binary name");
-    if args.peek().map(OsStr::new) == Some(OsStr::new("cite")) {
-        args.next();
-    }
-
     // parse using clap
-    let args = iter::once(binary_name).chain(args).collect::<Vec<_>>();
-    let cli = Cli::parse_from(args);
-    // println!("{:?}", cli);
+    let args = Args::parse();
 
-    // Get all file names to parse
-    // TODO: Expand to accept single files and directories via an argument
-    // https://github.com/dcchut/cargo-derivefmt/blob/master/cargo-derivefmt/src/main.rs
-    let targets = get_targets(cli.manifest.manifest_path.as_deref()).unwrap();
-    let files = targets
-        .iter()
-        .flat_map(|t| get_target_files(t).unwrap())
-        .collect::<Vec<_>>();
+    // If a manifest or nothing was specified
+    let files = if args.files.is_empty() {
+        let targets = get_targets(args.manifest_path.as_deref())?;
+        targets
+            .iter()
+            .map(|t| get_target_files(t))
+            .flatten()
+            .flatten()
+            .collect()
+    // If specific files were specified
+    } else {
+        let mut found_files = Vec::new();
+        for file in args.files {
+            if file.is_dir() {
+                let glob = file.join("**").join("*.rs");
+                for entry in glob::glob(&glob.to_string_lossy())? {
+                    let path = entry?;
+                    found_files.push(path);
+                }
+            } else {
+                found_files.push(file);
+            }
+        }
+        found_files
+    };
 
     // Cite each file
     for f in files {
         let mut file = File::open(f);
-        file.cite(&cli.bib, &cli.style);
+        file.cite(&args.bib, &args.style);
         file.save();
     }
+
+    Ok(())
 }

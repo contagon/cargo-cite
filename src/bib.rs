@@ -11,6 +11,7 @@ use thiserror::Error;
 
 // ------------------------- Keys -> Citations ------------------------- //
 /// Convert set of keys to formatted citations
+// TODO: Return Nones for missing keys?? Then can process w/ exact line number or something
 pub fn keys_to_citations(
     keys: &BTreeSet<String>,
     bib: &Library,
@@ -60,6 +61,7 @@ pub fn keys_to_citations(
 }
 
 // ------------------------- Loading Style ------------------------- //
+/// Error type for loading a style
 #[derive(Debug, Error)]
 pub enum StyleError {
     #[error("Invalid style name, see hayagriva::archive::ArchivedStyle")]

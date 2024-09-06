@@ -113,10 +113,9 @@ dependencies = [
 name = "cargo-cite"
 version = "0.1.0"
 dependencies = [
- "biblatex",
  "cargo-files-core",
  "clap",
- "clap-cargo",
+ "glob",
  "hayagriva",
  "lazy_static",
  "log",
@@ -238,17 +237,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "clap-cargo"
-version = "0.14.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23b2ea69cefa96b848b73ad516ad1d59a195cdf9263087d977f648a818c8b43e"
-dependencies = [
- "anstyle",
- "cargo_metadata",
- "clap",
-]
-
-[[package]]
 name = "clap_builder"
 version = "4.5.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -327,6 +315,12 @@ checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
 dependencies = [
  "percent-encoding",
 ]
+
+[[package]]
+name = "glob"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 
 [[package]]
 name = "half"
