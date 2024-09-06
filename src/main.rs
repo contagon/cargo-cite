@@ -6,29 +6,21 @@ pub use file::File;
 
 mod bib;
 pub use bib::{keys_to_citations, load_bib, load_style};
+use hayagriva::{citationberg::IndependentStyle, Library};
 
-use std::{env, ffi::OsStr, iter, path::PathBuf};
+use std::{env, ffi::OsStr, iter};
 
-use cargo_files_core::get_targets;
+use cargo_files_core::{get_target_files, get_targets};
 use clap::Parser;
-use lazy_static::lazy_static;
-use regex::Regex;
-
-lazy_static! {
-    // Matches citations inline
-    static ref RE_CITATION: Regex = Regex::new(r"\[\^@(.*?)\]").unwrap();
-    // Matches comments (ie line begins with //! or ///)
-    static ref RE_COMMENT: Regex = Regex::new(r"^[ \t]*//[/!]").unwrap();
-    // Matches footnotes (ie line begins with /// [^@citekey]:)
-    static ref RE_FOOTNOTE: Regex = Regex::new(r"^[ \t]*//[/!]\s*\[\^@(.*?)\]:").unwrap();
-}
 
 #[derive(Debug, Parser)]
 struct Cli {
-    #[clap(required = true, long = "bib")]
-    bib: PathBuf,
+    #[clap(required = true, long = "bib", value_parser = load_bib)]
+    bib: Library,
     #[command(flatten)]
     manifest: clap_cargo::Manifest,
+    #[clap(long = "style", default_value = "ieee", value_parser = load_style)]
+    style: IndependentStyle,
 }
 
 /// A file with comments
@@ -50,18 +42,19 @@ fn main() {
     // println!("{:?}", cli);
 
     // Get all file names to parse
-    // TODO: Expand to accept single files
+    // TODO: Expand to accept single files and directories via an argument
     // https://github.com/dcchut/cargo-derivefmt/blob/master/cargo-derivefmt/src/main.rs
-    let files = get_targets(cli.manifest.manifest_path.as_deref()).unwrap();
-    // println!("{:?}", files);
+    let targets = get_targets(cli.manifest.manifest_path.as_deref()).unwrap();
+    let files = targets
+        .iter()
+        .flat_map(|t| get_target_files(t).unwrap())
+        .collect::<Vec<_>>();
+    println!("{:#?}", files);
 
-    // load bib file
-    let lib = load_bib(cli.bib);
-    let style = load_style("ieee");
-
+    // Cite each file
     for f in files {
-        let mut file = File::open(f.path);
-        file.cite(&lib, &style);
+        let mut file = File::open(f);
+        file.cite(&cli.bib, &cli.style);
         file.save();
     }
 }

@@ -1,8 +1,19 @@
 use std::{collections::BTreeSet, fmt::Display};
 
 use hayagriva::{citationberg::IndependentStyle, Library};
+use regex::Regex;
 
-use crate::{keys_to_citations, RE_CITATION, RE_COMMENT, RE_FOOTNOTE};
+use crate::keys_to_citations;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    // Matches citations inline
+    pub static ref RE_CITATION: Regex = Regex::new(r"\[\^@(.*?)\]").unwrap();
+    // Matches comments (ie line begins with //! or ///)
+    pub static ref RE_COMMENT: Regex = Regex::new(r"^[ \t]*//[/!]").unwrap();
+    // Matches footnotes (ie line begins with /// [^@citekey]:)
+    pub static ref RE_FOOTNOTE: Regex = Regex::new(r"^[ \t]*//[/!]\s*\[\^@(.*?)\]:").unwrap();
+}
 
 pub trait BlockType {
     fn len(&self) -> usize;
@@ -67,7 +78,7 @@ impl BlockType for Comment {
 
         // Check if need a blank line before citations
         let last_line = self.lines.last().unwrap();
-        if *last_line != *start {
+        if !citations.is_empty() && *last_line != *start {
             self.lines.push(start.clone());
         }
 

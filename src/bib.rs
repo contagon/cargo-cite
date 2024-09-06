@@ -45,18 +45,18 @@ pub fn keys_to_citations(
 }
 
 /// Load a style by name
-pub fn load_style(name: &str) -> IndependentStyle {
-    let style = ArchivedStyle::by_name(name).unwrap().get();
+pub fn load_style(name: &str) -> Result<IndependentStyle, String> {
+    let style = ArchivedStyle::by_name(name).ok_or("Invalid Style")?.get();
     if let Style::Independent(i) = style {
-        i
+        Ok(i)
     } else {
         panic!("Could not load style");
     }
 }
 
 /// Load a bibliography from a file
-pub fn load_bib(path: impl AsRef<Path>) -> Library {
-    let bib = std::fs::read_to_string(path).unwrap();
-    let bib = from_biblatex_str(&bib).unwrap();
-    bib
+pub fn load_bib(path: &str) -> Result<Library, String> {
+    let bib = std::fs::read_to_string(path).map_err(|_| "Could not read file")?;
+    let bib = from_biblatex_str(&bib).map_err(|_| "Couldn't load bibtex")?;
+    Ok(bib)
 }

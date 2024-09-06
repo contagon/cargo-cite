@@ -9,8 +9,9 @@ use hayagriva::{citationberg::IndependentStyle, Library};
 use std::io::Write;
 
 use crate::{
+    block::RE_COMMENT,
     block::{BlockType, Code, Comment},
-    Block, RE_COMMENT,
+    Block,
 };
 
 #[derive(Debug, Clone)]
