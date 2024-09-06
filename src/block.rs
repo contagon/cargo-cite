@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, fmt::Display};
+use std::{collections::BTreeSet, fmt::Display, path::Path};
 
 use hayagriva::{citationberg::IndependentStyle, Library};
 use regex::Regex;
@@ -18,7 +18,7 @@ lazy_static! {
 pub trait BlockType {
     fn len(&self) -> usize;
     fn insert(&mut self, line: String);
-    fn cite(&mut self, bib: &Library, style: &IndependentStyle);
+    fn cite(&mut self, bib: &Library, style: &IndependentStyle, file: impl AsRef<Path>);
 }
 
 // ------------------------- Comment block ------------------------- //
@@ -68,16 +68,18 @@ impl BlockType for Comment {
         self.lines.push(line);
     }
 
-    fn cite(&mut self, bib: &Library, style: &IndependentStyle) {
+    fn cite(&mut self, bib: &Library, style: &IndependentStyle, file: impl AsRef<Path>) {
         // Get indentation
-        let start = RE_COMMENT.captures(&self.lines[0]).unwrap();
+        let start = RE_COMMENT
+            .captures(&self.lines[0])
+            .expect("Comment found without delimiter");
         let start = start[0].to_string();
 
         // Create citation lines
-        let citations = keys_to_citations(&self.citations, bib, style);
+        let citations = keys_to_citations(&self.citations, bib, style, file);
 
         // Check if need a blank line before citations
-        let last_line = self.lines.last().unwrap();
+        let last_line = self.lines.last().expect("Comment found without any lines");
         if !citations.is_empty() && *last_line != *start {
             self.lines.push(start.clone());
         }
@@ -119,7 +121,7 @@ impl BlockType for Code {
         self.lines.push(line);
     }
 
-    fn cite(&mut self, _bib: &Library, _style: &IndependentStyle) {}
+    fn cite(&mut self, _bib: &Library, _style: &IndependentStyle, _path: impl AsRef<Path>) {}
 }
 
 // ------------------------- Block ------------------------- //
@@ -155,10 +157,10 @@ impl BlockType for Block {
         }
     }
 
-    fn cite(&mut self, bib: &Library, style: &IndependentStyle) {
+    fn cite(&mut self, bib: &Library, style: &IndependentStyle, file: impl AsRef<Path>) {
         match self {
-            Block::Comment(c) => c.cite(bib, style),
-            Block::Code(c) => c.cite(bib, style),
+            Block::Comment(c) => c.cite(bib, style, file),
+            Block::Code(c) => c.cite(bib, style, file),
         }
     }
 }

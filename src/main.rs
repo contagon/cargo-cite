@@ -25,10 +25,13 @@ struct Cli {
 
 /// A file with comments
 ///
-/// This struct is used to parse a file and extract comments [^@simple]
+/// This struct is used to parse a file and extract comments [^@simple] [^@test].
 ///
 /// [^@simple]: S. Bai, J. Lai, P. Lyu, Y. Cen, B. Wang, and X. Sun, “Graph-Optimisation-Based Self-Calibration Method for IMU/Odometer Using Preintegration Theory,” The Journal of Navigation, vol. 75, no. 3, pp. 594–613, May 2022, doi: 10.1017/S0373463321000722.
 fn main() {
+    // Initialize logger
+    stderrlog::new().verbosity(3).init().unwrap();
+
     // Skip cargo & binary name
     let mut args = env::args_os().peekable();
     let binary_name = args.next().expect("Should have binary name");
@@ -49,7 +52,6 @@ fn main() {
         .iter()
         .flat_map(|t| get_target_files(t).unwrap())
         .collect::<Vec<_>>();
-    println!("{:#?}", files);
 
     // Cite each file
     for f in files {

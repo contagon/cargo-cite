@@ -42,8 +42,19 @@ impl File {
             .map(|l| l.expect("Could not parse line"))
             .peekable();
 
+        // Handle the case of empty files
+        let first = match lines.peek() {
+            Some(first) => first,
+            None => {
+                return Self {
+                    blocks: Vec::new(),
+                    filename,
+                }
+            }
+        };
+
         let mut blocks = Vec::new();
-        let mut current = if RE_COMMENT.is_match(&lines.peek().unwrap()) {
+        let mut current = if RE_COMMENT.is_match(first) {
             Block::Comment(Comment::default())
         } else {
             Block::Code(Code::default())
@@ -74,7 +85,7 @@ impl File {
 
     pub fn cite(&mut self, bib: &Library, style: &IndependentStyle) {
         for block in self.blocks.iter_mut() {
-            block.cite(bib, style);
+            block.cite(bib, style, &self.filename);
         }
     }
 
