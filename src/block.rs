@@ -1,17 +1,17 @@
 use std::{collections::BTreeSet, fmt::Display};
 
-use enum_dispatch::enum_dispatch;
+use hayagriva::{citationberg::IndependentStyle, Library};
 
-use crate::{RE_CITATION, RE_COMMENT, RE_FOOTNOTE};
+use crate::{keys_to_citations, RE_CITATION, RE_COMMENT, RE_FOOTNOTE};
 
-#[enum_dispatch]
 pub trait BlockType {
     fn len(&self) -> usize;
     fn insert(&mut self, line: String);
-    fn cite(&mut self, bib: &crate::Bibliography);
+    fn cite(&mut self, bib: &Library, style: &IndependentStyle);
 }
 
 // ------------------------- Comment block ------------------------- //
+
 #[derive(Debug, Clone)]
 pub struct Comment {
     lines: Vec<String>,
@@ -44,10 +44,10 @@ impl BlockType for Comment {
     fn insert(&mut self, line: String) {
         // Check if the line contains a reference
         if RE_CITATION.is_match(&line) {
-            // If it's from the footnote, don't keep it
+            // If it's from the footnote, don't keep the line at all
             if RE_FOOTNOTE.is_match(&line) {
                 return;
-            // Otherwise, keep them
+            // Otherwise, cache the citation
             } else {
                 for cite in RE_CITATION.captures_iter(&line) {
                     self.citations.insert(cite[1].to_string());
@@ -57,21 +57,23 @@ impl BlockType for Comment {
         self.lines.push(line);
     }
 
-    fn cite(&mut self, bib: &crate::Bibliography) {
+    fn cite(&mut self, bib: &Library, style: &IndependentStyle) {
         // Get indentation
         let start = RE_COMMENT.captures(&self.lines[0]).unwrap();
         let start = start[0].to_string();
-        println!("Start: {}", start);
 
         // Create citation lines
-        for cite in &self.citations {
-            if let Some(entry) = bib.get(cite) {
-                // TODO: Proper citation
-                let citation = format!("{} [^@{}]: {:?}", start, cite, entry);
-                self.lines.push(citation);
-            } else {
-                println!("@{} citekey not in bib file", cite);
-            }
+        let citations = keys_to_citations(&self.citations, bib, style);
+
+        // Check if need a blank line before citations
+        let last_line = self.lines.last().unwrap();
+        if *last_line != *start {
+            self.lines.push(start.clone());
+        }
+
+        // Insert citations
+        for (key, cite) in self.citations.iter().zip(citations) {
+            self.lines.push(format!("{} [^@{}]: {}", start, key, cite));
         }
     }
 }
@@ -106,11 +108,10 @@ impl BlockType for Code {
         self.lines.push(line);
     }
 
-    fn cite(&mut self, _bib: &crate::Bibliography) {}
+    fn cite(&mut self, _bib: &Library, _style: &IndependentStyle) {}
 }
 
 // ------------------------- Block ------------------------- //
-#[enum_dispatch(BlockType)]
 #[derive(Debug, Clone)]
 pub enum Block {
     Comment(Comment),
@@ -122,6 +123,31 @@ impl Display for Block {
         match self {
             Block::Comment(c) => write!(f, "{}", c),
             Block::Code(c) => write!(f, "{}", c),
+        }
+    }
+}
+
+// This could be done with enum dispatch...
+// but it's simple enough to do by hand
+impl BlockType for Block {
+    fn len(&self) -> usize {
+        match self {
+            Block::Comment(c) => c.len(),
+            Block::Code(c) => c.len(),
+        }
+    }
+
+    fn insert(&mut self, line: String) {
+        match self {
+            Block::Comment(c) => c.insert(line),
+            Block::Code(c) => c.insert(line),
+        }
+    }
+
+    fn cite(&mut self, bib: &Library, style: &IndependentStyle) {
+        match self {
+            Block::Comment(c) => c.cite(bib, style),
+            Block::Code(c) => c.cite(bib, style),
         }
     }
 }

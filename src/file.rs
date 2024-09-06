@@ -5,11 +5,11 @@ use std::{
     path::PathBuf,
 };
 
-use biblatex::Bibliography;
+use hayagriva::{citationberg::IndependentStyle, Library};
 use std::io::Write;
 
 use crate::{
-    line::{BlockType, Code, Comment},
+    block::{BlockType, Code, Comment},
     Block, RE_COMMENT,
 };
 
@@ -71,9 +71,9 @@ impl File {
         Self { blocks, filename }
     }
 
-    pub fn cite(&mut self, bib: &Bibliography) {
+    pub fn cite(&mut self, bib: &Library, style: &IndependentStyle) {
         for block in self.blocks.iter_mut() {
-            block.cite(bib);
+            block.cite(bib, style);
         }
     }
 
