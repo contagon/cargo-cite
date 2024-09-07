@@ -11,8 +11,10 @@ lazy_static! {
     pub static ref RE_CITATION: Regex = Regex::new(r"\[\^@(.*?)\]").unwrap();
     // Matches comments (ie line begins with //! or ///)
     pub static ref RE_COMMENT: Regex = Regex::new(r"^[ \t]*//[/!]").unwrap();
-    // Matches footnotes (ie line begins with /// [^@citekey]:)
-    pub static ref RE_FOOTNOTE: Regex = Regex::new(r"^[ \t]*//[/!]\s*\[\^@(.*?)\]:").unwrap();
+    // Matches citation footnote (ie line begins with /// [^@citekey]:)
+    pub static ref RE_CITE_FOOTNOTE: Regex = Regex::new(r"^[ \t]*//[/!]\s*\[\^@(.*?)\]:").unwrap();
+    // Matches any footnote (ie line begins with /// [^footnote]:)
+    pub static ref RE_FOOTNOTE: Regex = Regex::new(r"^[ \t]*//[/!]\s*\[\^.*\]:").unwrap();
 }
 
 pub trait BlockType {
@@ -52,11 +54,12 @@ impl BlockType for Comment {
         self.lines.len()
     }
 
+    // TODO: Check in here if a cite key does/doesn't exist (could pass line # and file name)
     fn insert(&mut self, line: String) {
         // Check if the line contains a reference
         if RE_CITATION.is_match(&line) {
             // If it's from the footnote, don't keep the line at all
-            if RE_FOOTNOTE.is_match(&line) {
+            if RE_CITE_FOOTNOTE.is_match(&line) {
                 return;
             // Otherwise, cache the citation
             } else {
@@ -80,7 +83,8 @@ impl BlockType for Comment {
 
         // Check if need a blank line before citations
         let last_line = self.lines.last().expect("Comment found without any lines");
-        if !citations.is_empty() && *last_line != *start {
+        // If there is a citation & the last line is not a normal footnote & the last line isn't already a blank line
+        if !citations.is_empty() && !RE_FOOTNOTE.is_match(last_line) && *last_line != start {
             self.lines.push(start.clone());
         }
 
@@ -88,6 +92,12 @@ impl BlockType for Comment {
         for (key, cite) in self.citations.iter().zip(citations) {
             self.lines.push(format!("{} [^@{}]: {}", start, key, cite));
         }
+    }
+}
+
+impl Comment {
+    pub fn citations(&self) -> &BTreeSet<String> {
+        &self.citations
     }
 }
 

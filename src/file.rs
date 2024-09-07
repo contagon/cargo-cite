@@ -30,6 +30,10 @@ impl Display for File {
 }
 
 impl File {
+    pub fn blocks(&self) -> &[Block] {
+        &self.blocks
+    }
+
     pub fn filename(&self) -> &PathBuf {
         &self.filename
     }
@@ -37,10 +41,13 @@ impl File {
     pub fn open(filename: PathBuf) -> Self {
         let file = fs::File::open(filename.clone()).expect("no such file");
         let buf = BufReader::new(file);
-        let mut lines = buf
-            .lines()
-            .map(|l| l.expect("Could not parse line"))
-            .peekable();
+        let lines = buf.lines().map(|l| l.expect("Could not parse line"));
+
+        Self::open_from_lines(lines, filename)
+    }
+
+    pub fn open_from_lines(lines: impl Iterator<Item = String>, filename: PathBuf) -> Self {
+        let mut lines = lines.peekable();
 
         // Handle the case of empty files
         let first = match lines.peek() {

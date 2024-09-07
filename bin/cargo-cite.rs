@@ -1,13 +1,7 @@
-mod block;
 use std::{error::Error, path::PathBuf};
 
-pub use block::Block;
+use cargo_cite::{load_bib, load_style, File};
 
-mod file;
-pub use file::File;
-
-mod bib;
-pub use bib::{keys_to_citations, load_bib, load_style};
 use hayagriva::{citationberg::IndependentStyle, Library};
 
 use cargo_files_core::{get_target_files, get_targets};
