@@ -5,7 +5,7 @@ use cargo_cite::{load_bib, load_style, File};
 use hayagriva::{citationberg::IndependentStyle, Library};
 
 use cargo_files_core::{get_target_files, get_targets};
-use clap::Parser;
+use clap::{ArgAction, Parser};
 
 #[derive(Debug, Parser)]
 // Cargo passes "cite" to cargo-cite, so add a hidden argument to capture that.
@@ -16,29 +16,44 @@ use clap::Parser;
     .hide(true))
 )]
 struct Args {
-    // Bibliography file
-    #[clap(required = true, long = "bib", value_parser = load_bib)]
+    /// Bibtex file with citations
+    #[clap(short, long, required = true, value_parser = load_bib)]
     bib: Library,
-    // Citation style
-    #[clap(long = "style", default_value = "ieee", value_parser = load_style)]
+    /// Citation style, ie ieee, apa, chicago
+    #[clap(short, long, default_value = "mla", value_parser = load_style)]
     style: IndependentStyle,
-    // Cargo manifest location for other crates
-    #[clap(long, conflicts_with = "files")]
+    /// Cargo manifest location for other crates
+    #[clap(short, long = "manifest", conflicts_with = "files")]
     manifest_path: Option<PathBuf>,
-    /// Path to file or folder to format.  Can be specified multiple times.
+    /// Path to file or folder to format. Can be specified multiple times.
     #[clap(short, long = "file", conflicts_with = "manifest_path")]
     files: Vec<PathBuf>,
+    /// Verbosity level
+    // TODO: Fix verbosity
+    // TODO: Fill out README
+    // TODO: flamegraph check for performance (I bet it's hayagravia)
+    #[clap(short, long, action = ArgAction::Count)]
+    verbose: u8,
+    /// Silence all output
+    #[clap(short, long, action)]
+    quiet: bool,
 }
 
 /// A file with comments
 fn main() -> Result<(), Box<dyn Error>> {
-    // Initialize logger
-    stderrlog::new().verbosity(3).init().unwrap();
-
     // parse using clap
     let args = Args::parse();
 
+    // Initialize logger
+    let verbose = if args.verbose == 0 { 1 } else { args.verbose };
+    stderrlog::new()
+        .quiet(args.quiet)
+        .verbosity(verbose as usize)
+        .init()
+        .unwrap();
+
     // If a manifest or nothing was specified
+    log::debug!("Gathering files...");
     let files = if args.files.is_empty() {
         let targets = get_targets(args.manifest_path.as_deref())?;
         targets
@@ -47,7 +62,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .flatten()
             .flatten()
             .collect()
-    // If specific files were specified
+    // If specific files were given
     } else {
         let mut found_files = Vec::new();
         for file in args.files {
@@ -66,8 +81,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Cite each file
     for f in files {
-        let mut file = File::open(f);
+        log::debug!("Parsing file: {:?}", f);
+        let mut file = File::open(f.clone());
+        log::debug!("Citing file: {:?}", f);
         file.cite(&args.bib, &args.style);
+        log::debug!("Saving file: {:?}", f);
         file.save();
     }
 

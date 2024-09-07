@@ -35,10 +35,10 @@ fn parse_basic_cite() {
     /// This is a comment
     /// that spans multiple lines
     /// And has a citation [^@simple]
-    /// And another citation [^@another] that's not in the bibfile
+    /// And another citation [^@another] that's not in the bib file
     /// And another footnote [^footnote] that's not a citation
     ///
-    /// [^@another]: J. Doe and J. Smith, “A very simple title,” The Journal of Rust, May 2013.
+    /// [^@another]: J. Doe and J. Smith, “A very simple title,” The Journal of Rust, May 2013. (should be dropped)
     fn main() {
         color = v_color;
     };
