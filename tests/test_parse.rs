@@ -38,7 +38,7 @@ fn parse_basic_cite() {
     /// And another citation [^@another] that's not in the bib file
     /// And another footnote [^footnote] that's not a citation
     ///
-    /// [^@another]: J. Doe and J. Smith, “A very simple title,” The Journal of Rust, May 2013. (should be dropped)
+    /// [^@another]: Doe, John, and Jane Smith. “A Very Simple Title.” The Journal of Rust, May 2013
     fn main() {
         color = v_color;
     };
@@ -66,7 +66,7 @@ fn parse_extra_line() {
     /// And another footnote [^footnote] that's not a citation
     /// 
     /// [^footnote]: This is a footnote
-    /// [^@simple]: J. Doe and J. Smith, “A very simple title,” The Journal of Rust, May 2013.
+    /// [^@simple]: Doe, John, and Jane Smith. “A Very Simple Title.” The Journal of Rust, May 2013
     fn main() {
         color = v_color;
     };

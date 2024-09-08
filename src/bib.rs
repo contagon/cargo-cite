@@ -18,6 +18,10 @@ pub fn keys_to_citations(
     style: &IndependentStyle,
     file: impl AsRef<Path>,
 ) -> Vec<String> {
+    if keys.is_empty() {
+        return Vec::new();
+    }
+
     let mut driver = BibliographyDriver::new();
     let locales = locales();
 

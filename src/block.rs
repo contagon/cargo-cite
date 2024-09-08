@@ -64,7 +64,7 @@ impl BlockType for Comment {
             // Otherwise, cache the citation
             } else {
                 for cite in RE_CITATION.captures_iter(&line) {
-                    log::debug!("Citation found: {}", &cite[1]);
+                    log::info!("Citation found: {}", &cite[1]);
                     self.citations.insert(cite[1].to_string());
                 }
             }

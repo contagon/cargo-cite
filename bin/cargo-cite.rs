@@ -5,7 +5,8 @@ use cargo_cite::{load_bib, load_style, File};
 use hayagriva::{citationberg::IndependentStyle, Library};
 
 use cargo_files_core::{get_target_files, get_targets};
-use clap::{ArgAction, Parser};
+use clap::Parser;
+use stderrlog::LogLevelNum;
 
 #[derive(Debug, Parser)]
 // Cargo passes "cite" to cargo-cite, so add a hidden argument to capture that.
@@ -32,10 +33,10 @@ struct Args {
     // TODO: Fix verbosity
     // TODO: Fill out README
     // TODO: flamegraph check for performance (I bet it's hayagravia)
-    #[clap(short, long, action = ArgAction::Count)]
-    verbose: u8,
+    #[clap(short, long, default_value = "false")]
+    verbose: bool,
     /// Silence all output
-    #[clap(short, long, action)]
+    #[clap(short, long, default_value = "false")]
     quiet: bool,
 }
 
@@ -45,10 +46,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
     // Initialize logger
-    let verbose = if args.verbose == 0 { 1 } else { args.verbose };
+    let verbose = if args.verbose {
+        LogLevelNum::Info
+    } else {
+        LogLevelNum::Warn
+    };
     stderrlog::new()
         .quiet(args.quiet)
-        .verbosity(verbose as usize)
+        .verbosity(verbose)
         .init()
         .unwrap();
 
@@ -81,11 +86,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Cite each file
     for f in files {
-        log::debug!("Parsing file: {:?}", f);
+        log::info!("Beginning citation for {:?}", f);
         let mut file = File::open(f.clone());
-        log::debug!("Citing file: {:?}", f);
         file.cite(&args.bib, &args.style);
-        log::debug!("Saving file: {:?}", f);
         file.save();
     }
 
