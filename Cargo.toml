@@ -2,6 +2,17 @@
 name = "cargo-cite"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "Add bib citations to Rust docs"
+readme = "README.md"
+authors = ["Easton Potokar"]
+repository = "https://github.com/contagon/cargo-cite"
+keywords = ["cargo-subcommand", "biblatex", "cite", "documentation"]
+categories = [
+    "development-tools::cargo-plugins",
+    "command-line-utilities",
+    "parsing",
+]
 
 [dependencies]
 cargo-files-core = "0.2.1"
