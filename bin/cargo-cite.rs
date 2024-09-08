@@ -20,7 +20,7 @@ struct Args {
     /// Bibtex file with citations
     #[clap(short, long, required = true, value_parser = load_bib)]
     bib: Library,
-    /// Citation style, ie ieee, apa, chicago
+    /// Citation style, e.g. ieee, apa, chicago
     #[clap(short, long, default_value = "mla", value_parser = load_style)]
     style: IndependentStyle,
     /// Cargo manifest location for other crates
@@ -30,9 +30,6 @@ struct Args {
     #[clap(short, long = "file", conflicts_with = "manifest_path")]
     files: Vec<PathBuf>,
     /// Verbosity level
-    // TODO: Fix verbosity
-    // TODO: Fill out README
-    // TODO: flamegraph check for performance (I bet it's hayagravia)
     #[clap(short, long, default_value = "false")]
     verbose: bool,
     /// Silence all output
@@ -58,7 +55,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .unwrap();
 
     // If a manifest or nothing was specified
-    log::debug!("Gathering files...");
     let files = if args.files.is_empty() {
         let targets = get_targets(args.manifest_path.as_deref())?;
         targets
@@ -88,6 +84,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     for f in files {
         log::info!("Beginning citation for {:?}", f);
         let mut file = File::open(f.clone());
+        // TODO: Track all the citations in bulk here? For quicker lookup?
+        // Instead of doing it in the block
         file.cite(&args.bib, &args.style);
         file.save();
     }
