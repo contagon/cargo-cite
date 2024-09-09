@@ -13,6 +13,7 @@ categories = [
     "command-line-utilities",
     "parsing",
 ]
+exclude = ["assets/*"]
 
 [dependencies]
 cargo-files-core = "0.2.1"
@@ -24,7 +25,3 @@ log = "0.4.22"
 regex = "1.10.6"
 stderrlog = "0.6.0"
 thiserror = "1.0.63"
-
-[[bin]]
-name = "cargo-cite"
-path = "bin/cargo-cite.rs"
