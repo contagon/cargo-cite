@@ -1,5 +1,5 @@
 use core::fmt;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 
 use hayagriva::{
     archive::{locales, ArchivedStyle},
@@ -9,19 +9,22 @@ use hayagriva::{
 };
 use thiserror::Error;
 
+use crate::block::RE_CITATION;
+
 // ------------------------- Newtypes ------------------------- //
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Key(pub String);
 
 // ------------------------- Keys -> Citations ------------------------- //
 /// Convert set of keys to formatted citations
-// TODO: Return Nones for missing keys?? Then can process w/ exact line number or something
 pub fn keys_to_citations(
-    keys: &BTreeSet<Key>,
+    keys: impl IntoIterator<Item = Key>,
     bib: &Library,
     style: &IndependentStyle,
 ) -> HashMap<Key, String> {
-    if keys.is_empty() {
+    let mut keys = keys.into_iter().peekable();
+
+    if keys.peek().is_none() {
         return HashMap::new();
     }
 
@@ -29,7 +32,6 @@ pub fn keys_to_citations(
     let locales = locales();
 
     let entries: Vec<_> = keys
-        .iter()
         .filter_map(|key| {
             let cite = bib.get(&key.0);
             if cite.is_none() {
@@ -67,6 +69,7 @@ pub fn keys_to_citations(
 
 // ------------------------- Loading Style ------------------------- //
 /// Error type for loading a style
+///
 #[derive(Debug, Error)]
 pub enum StyleError {
     #[error("Invalid style name, see hayagriva::archive::ArchivedStyle")]
@@ -76,6 +79,7 @@ pub enum StyleError {
 }
 
 /// Load a style by name
+///
 pub fn load_style(name: &str) -> Result<IndependentStyle, StyleError> {
     let style = ArchivedStyle::by_name(name)
         .ok_or(StyleError::InvalidStyle)?
@@ -89,6 +93,7 @@ pub fn load_style(name: &str) -> Result<IndependentStyle, StyleError> {
 
 // ------------------------- Loading bibliography ------------------------- //
 /// Error type for loading a bibliography
+///
 #[derive(Debug, Error)]
 pub enum BibError {
     Io(#[from] std::io::Error),
@@ -116,8 +121,17 @@ impl fmt::Display for BibError {
 }
 
 /// Load a bibliography from a file
+///
 pub fn load_bib(path: &str) -> Result<Library, BibError> {
     let bib = std::fs::read_to_string(path)?;
     let bib = from_biblatex_str(&bib)?;
     Ok(bib)
+}
+
+// ------------------------- Scan file for keys ------------------------- //
+pub fn scan_for_key(file: &str) -> Vec<Key> {
+    RE_CITATION
+        .captures_iter(&file)
+        .map(|m| Key(m[1].to_string()))
+        .collect()
 }

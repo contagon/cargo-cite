@@ -1,6 +1,6 @@
-use std::{error::Error, path::PathBuf};
+use std::{collections::HashSet, error::Error, path::PathBuf};
 
-use cargo_cite::{keys_to_citations, load_bib, load_style, File};
+use cargo_cite::{keys_to_citations, load_bib, load_style, scan_for_key, File};
 
 use hayagriva::{citationberg::IndependentStyle, Library};
 
@@ -81,12 +81,25 @@ fn main() -> Result<(), Box<dyn Error>> {
         found_files
     };
 
-    // Cite each file
-    for f in files {
+    // Scan for all keys in the all the files
+    let mut keys = HashSet::new();
+    let mut files_to_process = Vec::new();
+    for f in files.iter() {
+        let k = scan_for_key(&std::fs::read_to_string(&f)?);
+        if !k.is_empty() {
+            log::info!("Found keys in {:?}: {:?}", f, k);
+            files_to_process.push(f);
+            keys.extend(k);
+        }
+    }
+
+    // Render all citations
+    let citations = keys_to_citations(keys, &args.bib, &args.style);
+
+    // Add citations to each file
+    for f in files_to_process {
         log::info!("Beginning citation for {:?}", f);
         let mut file = File::open(f.clone());
-        let citations = keys_to_citations(file.keys(), &args.bib, &args.style);
-        // Instead of doing it in the block
         file.cite(&citations);
         file.save();
     }

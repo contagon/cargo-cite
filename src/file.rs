@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::HashMap,
     fmt::Display,
     fs,
     io::{BufRead, BufReader},
@@ -17,7 +17,6 @@ use crate::{
 pub struct File {
     filename: PathBuf,
     blocks: Vec<Block>,
-    keys: BTreeSet<Key>,
 }
 
 impl Display for File {
@@ -56,14 +55,13 @@ impl File {
                 return Self {
                     blocks: Vec::new(),
                     filename,
-                    keys: BTreeSet::new(),
                 }
             }
         };
 
         let mut blocks = Vec::new();
         let mut current = if RE_COMMENT.is_match(first) {
-            Block::Comment(Comment::default())
+            Block::Comment(Comment::new(filename.clone()))
         } else {
             Block::Code(Code::default())
         };
@@ -73,7 +71,7 @@ impl File {
             if RE_COMMENT.is_match(&line) {
                 if let Block::Code(_) = current {
                     blocks.push(current);
-                    current = Block::Comment(Comment::default());
+                    current = Block::Comment(Comment::new(filename.clone()));
                 }
             // If we switched from comment to code
             } else {
@@ -87,29 +85,14 @@ impl File {
         }
 
         blocks.push(current);
-        let keys = blocks
-            .iter()
-            .map(|b| b.keys())
-            .flatten()
-            .flatten()
-            .cloned()
-            .collect();
 
-        Self {
-            blocks,
-            filename,
-            keys,
-        }
+        Self { blocks, filename }
     }
 
     pub fn cite(&mut self, citations: &HashMap<Key, String>) {
         for block in self.blocks.iter_mut() {
             block.cite(citations);
         }
-    }
-
-    pub fn keys(&self) -> &BTreeSet<Key> {
-        &self.keys
     }
 
     pub fn save(&self) {

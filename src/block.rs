@@ -1,6 +1,7 @@
 use std::{
     collections::{BTreeSet, HashMap},
     fmt::Display,
+    path::PathBuf,
 };
 
 use regex::Regex;
@@ -23,7 +24,6 @@ pub trait BlockType {
     fn len(&self) -> usize;
     fn insert(&mut self, line: String);
     fn cite(&mut self, citations: &HashMap<Key, String>);
-    fn keys(&self) -> Option<&BTreeSet<Key>>;
 }
 
 // ------------------------- Comment block ------------------------- //
@@ -32,14 +32,20 @@ pub trait BlockType {
 pub struct Comment {
     lines: Vec<String>,
     keys: BTreeSet<Key>,
+    file: PathBuf,
 }
 
-impl Default for Comment {
-    fn default() -> Self {
+impl Comment {
+    pub fn new(file: PathBuf) -> Self {
         Self {
             lines: Vec::new(),
             keys: BTreeSet::new(),
+            file,
         }
+    }
+
+    pub fn keys(&self) -> &BTreeSet<Key> {
+        &self.keys
     }
 }
 
@@ -85,21 +91,26 @@ impl BlockType for Comment {
         let last_line = self.lines.last().expect("Comment found without any lines");
         // If there is a citation & the last line is not a normal footnote & the last line isn't already a blank line
         // then add a blank line
-        if !citations.is_empty() && !RE_FOOTNOTE.is_match(last_line) && *last_line != start {
+        if !self.keys.is_empty() && !RE_FOOTNOTE.is_match(last_line) && *last_line != start {
             self.lines.push(start.clone());
         }
 
         // Insert citations
         for key in self.keys.iter() {
-            if let Some(cite) = citations.get(key) {
-                self.lines
-                    .push(format!("{} [^@{}]: {}", start, key.0, cite));
+            match citations.get(key) {
+                Some(cite) => {
+                    self.lines
+                        .push(format!("{} [^@{}]: {}", start, key.0, cite));
+                }
+                None => {
+                    log::warn!(
+                        "{}: Citation not found for key {:?}",
+                        self.file.to_string_lossy(),
+                        key,
+                    );
+                }
             }
         }
-    }
-
-    fn keys(&self) -> Option<&BTreeSet<Key>> {
-        Some(&self.keys)
     }
 }
 
@@ -134,10 +145,6 @@ impl BlockType for Code {
     }
 
     fn cite(&mut self, _citations: &HashMap<Key, String>) {}
-
-    fn keys(&self) -> Option<&BTreeSet<Key>> {
-        None
-    }
 }
 
 // ------------------------- Block ------------------------- //
@@ -177,13 +184,6 @@ impl BlockType for Block {
         match self {
             Block::Comment(c) => c.cite(citations),
             Block::Code(c) => c.cite(citations),
-        }
-    }
-
-    fn keys(&self) -> Option<&BTreeSet<Key>> {
-        match self {
-            Block::Comment(c) => c.keys(),
-            Block::Code(c) => c.keys(),
         }
     }
 }
