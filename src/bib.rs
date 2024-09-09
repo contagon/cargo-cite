@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{collections::BTreeSet, path::Path};
+use std::collections::{BTreeSet, HashMap};
 
 use hayagriva::{
     archive::{locales, ArchivedStyle},
@@ -9,32 +9,31 @@ use hayagriva::{
 };
 use thiserror::Error;
 
+// ------------------------- Newtypes ------------------------- //
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+pub struct Key(pub String);
+
 // ------------------------- Keys -> Citations ------------------------- //
 /// Convert set of keys to formatted citations
 // TODO: Return Nones for missing keys?? Then can process w/ exact line number or something
 pub fn keys_to_citations(
-    keys: &BTreeSet<String>,
+    keys: &BTreeSet<Key>,
     bib: &Library,
     style: &IndependentStyle,
-    file: impl AsRef<Path>,
-) -> Vec<String> {
+) -> HashMap<Key, String> {
     if keys.is_empty() {
-        return Vec::new();
+        return HashMap::new();
     }
 
     let mut driver = BibliographyDriver::new();
     let locales = locales();
 
-    let entries = keys
+    let entries: Vec<_> = keys
         .iter()
         .filter_map(|key| {
-            let cite = bib.get(key);
+            let cite = bib.get(&key.0);
             if cite.is_none() {
-                log::warn!(
-                    "{:?}: Key @{} not found in the bib file",
-                    file.as_ref(),
-                    key
-                );
+                log::warn!("Key @{} not found in the bib file", key.0);
             }
             cite
         })
@@ -42,7 +41,7 @@ pub fn keys_to_citations(
         .collect();
 
     driver.citation(CitationRequest::new(
-        entries,
+        entries.clone(),
         &style,
         Some(LocaleCode::en_us()),
         &locales,
@@ -61,6 +60,8 @@ pub fn keys_to_citations(
         .items
         .iter()
         .map(|item| format!("{:#}", item.content))
+        .zip(entries)
+        .map(|(cite, entry)| (Key(entry.entry.key().to_string()), cite))
         .collect()
 }
 

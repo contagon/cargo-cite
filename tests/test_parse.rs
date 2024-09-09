@@ -1,4 +1,4 @@
-use cargo_cite::{load_bib, load_style, Block, BlockType, File};
+use cargo_cite::{keys_to_citations, load_bib, load_style, Block, BlockType, File};
 
 #[test]
 fn parse_no_cites() {
@@ -19,7 +19,7 @@ fn parse_no_cites() {
     assert_eq!(blocks[1].len(), 3);
 
     if let Block::Comment(comment) = &blocks[0] {
-        assert_eq!(comment.citations().len(), 0);
+        assert_eq!(comment.keys().unwrap().len(), 0);
     } else {
         panic!("First block is not a comment");
     }
@@ -48,11 +48,12 @@ fn parse_basic_cite() {
     let style = load_style("ieee").unwrap();
 
     let mut file = File::open_from_lines(lines, "test.rs".into());
-    file.cite(&bib, &style);
+    let citations = keys_to_citations(file.keys(), &bib, &style);
+    file.cite(&citations);
 
     if let Block::Comment(comment) = &file.blocks()[0] {
         println!("{}", comment);
-        assert_eq!(comment.citations().len(), 2);
+        assert_eq!(comment.keys().unwrap().len(), 2);
         assert_eq!(comment.len(), 7);
     }
 }
@@ -76,11 +77,12 @@ fn parse_extra_line() {
     let style = load_style("ieee").unwrap();
 
     let mut file = File::open_from_lines(lines, "test.rs".into());
-    file.cite(&bib, &style);
+    let citations = keys_to_citations(file.keys(), &bib, &style);
+    file.cite(&citations);
 
     if let Block::Comment(comment) = &file.blocks()[0] {
         println!("{}", comment);
-        assert_eq!(comment.citations().len(), 1);
+        assert_eq!(comment.keys().unwrap().len(), 1);
         assert_eq!(comment.len(), 7);
     }
 }

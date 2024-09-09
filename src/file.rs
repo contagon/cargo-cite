@@ -1,23 +1,23 @@
 use std::{
+    collections::{BTreeSet, HashMap},
     fmt::Display,
     fs,
     io::{BufRead, BufReader},
     path::PathBuf,
 };
 
-use hayagriva::{citationberg::IndependentStyle, Library};
 use std::io::Write;
 
 use crate::{
-    block::RE_COMMENT,
-    block::{BlockType, Code, Comment},
-    Block,
+    block::{BlockType, Code, Comment, RE_COMMENT},
+    Block, Key,
 };
 
 #[derive(Debug, Clone)]
 pub struct File {
     filename: PathBuf,
     blocks: Vec<Block>,
+    keys: BTreeSet<Key>,
 }
 
 impl Display for File {
@@ -56,6 +56,7 @@ impl File {
                 return Self {
                     blocks: Vec::new(),
                     filename,
+                    keys: BTreeSet::new(),
                 }
             }
         };
@@ -68,13 +69,13 @@ impl File {
         };
 
         for line in lines {
-            // If we switched from comment to code
+            // If we switched from code to comment
             if RE_COMMENT.is_match(&line) {
                 if let Block::Code(_) = current {
                     blocks.push(current);
                     current = Block::Comment(Comment::default());
                 }
-            // If we switched from code to comment
+            // If we switched from comment to code
             } else {
                 if let Block::Comment(_) = current {
                     blocks.push(current);
@@ -86,14 +87,29 @@ impl File {
         }
 
         blocks.push(current);
+        let keys = blocks
+            .iter()
+            .map(|b| b.keys())
+            .flatten()
+            .flatten()
+            .cloned()
+            .collect();
 
-        Self { blocks, filename }
+        Self {
+            blocks,
+            filename,
+            keys,
+        }
     }
 
-    pub fn cite(&mut self, bib: &Library, style: &IndependentStyle) {
+    pub fn cite(&mut self, citations: &HashMap<Key, String>) {
         for block in self.blocks.iter_mut() {
-            block.cite(bib, style, &self.filename);
+            block.cite(citations);
         }
+    }
+
+    pub fn keys(&self) -> &BTreeSet<Key> {
+        &self.keys
     }
 
     pub fn save(&self) {

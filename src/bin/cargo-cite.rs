@@ -1,6 +1,6 @@
 use std::{error::Error, path::PathBuf};
 
-use cargo_cite::{load_bib, load_style, File};
+use cargo_cite::{keys_to_citations, load_bib, load_style, File};
 
 use hayagriva::{citationberg::IndependentStyle, Library};
 
@@ -85,9 +85,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     for f in files {
         log::info!("Beginning citation for {:?}", f);
         let mut file = File::open(f.clone());
-        // TODO: Track all the citations in bulk here? For quicker lookup?
+        let citations = keys_to_citations(file.keys(), &args.bib, &args.style);
         // Instead of doing it in the block
-        file.cite(&args.bib, &args.style);
+        file.cite(&citations);
         file.save();
     }
     println!("Citation took {:?}", start.elapsed());

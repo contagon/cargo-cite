@@ -1,9 +1,11 @@
-use std::{collections::BTreeSet, fmt::Display, path::Path};
+use std::{
+    collections::{BTreeSet, HashMap},
+    fmt::Display,
+};
 
-use hayagriva::{citationberg::IndependentStyle, Library};
 use regex::Regex;
 
-use crate::keys_to_citations;
+use crate::Key;
 use lazy_static::lazy_static;
 
 lazy_static! {
@@ -20,7 +22,8 @@ lazy_static! {
 pub trait BlockType {
     fn len(&self) -> usize;
     fn insert(&mut self, line: String);
-    fn cite(&mut self, bib: &Library, style: &IndependentStyle, file: impl AsRef<Path>);
+    fn cite(&mut self, citations: &HashMap<Key, String>);
+    fn keys(&self) -> Option<&BTreeSet<Key>>;
 }
 
 // ------------------------- Comment block ------------------------- //
@@ -28,14 +31,14 @@ pub trait BlockType {
 #[derive(Debug, Clone)]
 pub struct Comment {
     lines: Vec<String>,
-    citations: BTreeSet<String>,
+    keys: BTreeSet<Key>,
 }
 
 impl Default for Comment {
     fn default() -> Self {
         Self {
             lines: Vec::new(),
-            citations: BTreeSet::new(),
+            keys: BTreeSet::new(),
         }
     }
 }
@@ -54,7 +57,6 @@ impl BlockType for Comment {
         self.lines.len()
     }
 
-    // TODO: Check in here if a cite key does/doesn't exist (could pass line # and file name)
     fn insert(&mut self, line: String) {
         // Check if the line contains a reference
         if RE_CITATION.is_match(&line) {
@@ -65,40 +67,39 @@ impl BlockType for Comment {
             } else {
                 for cite in RE_CITATION.captures_iter(&line) {
                     log::info!("Citation found: {}", &cite[1]);
-                    self.citations.insert(cite[1].to_string());
+                    self.keys.insert(Key(cite[1].to_string()));
                 }
             }
         }
         self.lines.push(line);
     }
 
-    fn cite(&mut self, bib: &Library, style: &IndependentStyle, file: impl AsRef<Path>) {
+    fn cite(&mut self, citations: &HashMap<Key, String>) {
         // Get indentation
         let start = RE_COMMENT
             .captures(&self.lines[0])
             .expect("Comment found without delimiter");
         let start = start[0].to_string();
 
-        // Create citation lines
-        let citations = keys_to_citations(&self.citations, bib, style, file);
-
         // Check if need a blank line before citations
         let last_line = self.lines.last().expect("Comment found without any lines");
         // If there is a citation & the last line is not a normal footnote & the last line isn't already a blank line
+        // then add a blank line
         if !citations.is_empty() && !RE_FOOTNOTE.is_match(last_line) && *last_line != start {
             self.lines.push(start.clone());
         }
 
         // Insert citations
-        for (key, cite) in self.citations.iter().zip(citations) {
-            self.lines.push(format!("{} [^@{}]: {}", start, key, cite));
+        for key in self.keys.iter() {
+            if let Some(cite) = citations.get(key) {
+                self.lines
+                    .push(format!("{} [^@{}]: {}", start, key.0, cite));
+            }
         }
     }
-}
 
-impl Comment {
-    pub fn citations(&self) -> &BTreeSet<String> {
-        &self.citations
+    fn keys(&self) -> Option<&BTreeSet<Key>> {
+        Some(&self.keys)
     }
 }
 
@@ -132,7 +133,11 @@ impl BlockType for Code {
         self.lines.push(line);
     }
 
-    fn cite(&mut self, _bib: &Library, _style: &IndependentStyle, _path: impl AsRef<Path>) {}
+    fn cite(&mut self, _citations: &HashMap<Key, String>) {}
+
+    fn keys(&self) -> Option<&BTreeSet<Key>> {
+        None
+    }
 }
 
 // ------------------------- Block ------------------------- //
@@ -168,10 +173,17 @@ impl BlockType for Block {
         }
     }
 
-    fn cite(&mut self, bib: &Library, style: &IndependentStyle, file: impl AsRef<Path>) {
+    fn cite(&mut self, citations: &HashMap<Key, String>) {
         match self {
-            Block::Comment(c) => c.cite(bib, style, file),
-            Block::Code(c) => c.cite(bib, style, file),
+            Block::Comment(c) => c.cite(citations),
+            Block::Code(c) => c.cite(citations),
+        }
+    }
+
+    fn keys(&self) -> Option<&BTreeSet<Key>> {
+        match self {
+            Block::Comment(c) => c.keys(),
+            Block::Code(c) => c.keys(),
         }
     }
 }

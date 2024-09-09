@@ -5,4 +5,4 @@ mod file;
 pub use file::File;
 
 mod bib;
-pub use bib::{keys_to_citations, load_bib, load_style};
+pub use bib::{keys_to_citations, load_bib, load_style, Key};
