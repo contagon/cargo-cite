@@ -1,5 +1,8 @@
 # cargo-cite
 
+[![ci](https://github.com/contagon/cargo-cite/actions/workflows/rust.yml/badge.svg)](https://github.com/contagon/cargo-cite/actions/workflows/rust.yml)
+[![crates.io](https://img.shields.io/crates/v/cargo-cite.svg)](https://crates.io/crates/cargo-cite)
+
 This is a simple cargo command that emulates the functionality of bibtex citing in latex, but for rust documentation. After installation, the command 
 ```bash
 cargo cite --bib ref.bib
