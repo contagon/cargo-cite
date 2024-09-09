@@ -2,3 +2,4 @@
 /.vscode
 perf*
 *.svg
+profile.json
