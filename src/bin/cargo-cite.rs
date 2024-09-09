@@ -55,7 +55,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .unwrap();
 
     // If a manifest or nothing was specified
-    let start = std::time::Instant::now();
     let files = if args.files.is_empty() {
         let targets = get_targets(args.manifest_path.as_deref())?;
         targets
@@ -103,7 +102,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         file.cite(&citations);
         file.save();
     }
-    println!("Citation took {:?}", start.elapsed());
 
     Ok(())
 }

@@ -56,7 +56,7 @@ Options:
 
 ## Disclaimer
 
-While well tested and used internally, `cargo cite` does read in all your source code and rewrite it. It is recommended to use version control and/or backups when using this tool.
+While well tested and used internally, `cargo cite` does read in all your source code and rewrite the ones with cite-keys. It is recommended to use version control and/or backups when using this tool.
 
 ## Contributing
 
